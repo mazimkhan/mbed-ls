@@ -178,11 +178,23 @@ def mbedls_main():
         for token in opts.mock_platform.split(','):
             if ':' in token:
                 oper = '+' # Default
-                mid, platform_name = token.split(':')
+                attributes = token.split(':')
+                mid = None
+                platform_name = None
+                mount_point = None
+                serial = None
+                if len(attributes) == 2:
+                    mid, platform_name = attributes
+                elif len(attributes) == 4:
+                    mid, platform_name, mount_point, serial = attributes
+                    mount_point += ':'
                 if mid and mid[0] in ['+', '-']:
                     oper = mid[0]   # Operation (character)
                     mid = mid[1:]   # We remove operation character
-                mbeds.mock_manufacture_ids(mid, platform_name, oper=oper)
+                if len(mid) != 4:
+                    print "Mock Id should be 4 characters!"
+                    sys.exit(1)
+                mbeds.mock_manufacture_ids(mid, platform_name, oper=oper, mount_point=mount_point, serial=serial)
             elif token and token[0] in ['-', '!']:
                 # Operations where do not specify data after colon: --mock=-1234,-7678
                 oper = token[0]

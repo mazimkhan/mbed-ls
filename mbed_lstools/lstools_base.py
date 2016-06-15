@@ -17,6 +17,7 @@ limitations under the License.
 
 import re
 import os
+import sys
 import json
 from os import listdir
 from os.path import isfile, join
@@ -36,7 +37,7 @@ class MbedLsToolsBase:
         mock_ids = self.mock_read()
         if mock_ids:
             for mid in mock_ids:
-                self.manufacture_ids[mid] = mock_ids[mid]
+                self.manufacture_ids[mid] = mock_ids[mid]['platform_name']
 
     # Which OSs are supported by this module
     # Note: more than one OS can be supported by mbed-lstools_* module
@@ -211,7 +212,13 @@ class MbedLsToolsBase:
                 self.debug(self.mock_read.__name__, "reading mock file %s"% self.MOCK_FILE_NAME)
             try:
                 with open(self.MOCK_FILE_NAME, "r") as f:
-                    return json.load(f)
+                    mocks = json.load(f)
+                    for mid, mock in mocks.iteritems():
+                        if type(mock) is not dict:
+                            self.err("Old format mock file! Please delete file - ./%s and re-create with -m option" %
+                                     self.MOCK_FILE_NAME)
+                            sys.exit(1)
+                    return mocks
             except IOError as e:
                 self.err("reading file '%s' failed: %s"% (os.path.abspath(self.MOCK_FILE_NAME),
                     str(e)))
@@ -260,7 +267,7 @@ class MbedLsToolsBase:
         self.retarget_data = self.retarget_read()
         return self.retarget_data
 
-    def mock_manufacture_ids(self, mid, platform_name, oper='+'):
+    def mock_manufacture_ids(self, mid, platform_name, oper='+', mount_point=None, serial=None):
         """! Replace (or add if manufacture id doesn't exist) entry in self.manufacture_ids
         @param oper '+' add new mock / override existing entry
                     '-' remove mid from mocking entry
@@ -270,7 +277,12 @@ class MbedLsToolsBase:
 
         # Operations on mocked structure
         if oper == '+':
-            mock_ids[mid] = platform_name
+            mock_info = {'platform_name': platform_name}
+            if mount_point:
+                mock_info['mount_point'] = mount_point
+            if serial:
+                mock_info['serial_port'] = serial
+            mock_ids[mid] = mock_info
             if self.DEBUG_FLAG:
                 self.debug(self.mock_manufacture_ids.__name__, "mock_ids['%s'] = '%s'"% (mid, platform_name))
         elif oper in ['-', '!']:
@@ -314,6 +326,18 @@ class MbedLsToolsBase:
         platform_names = {} # Count existing platforms and assign unique number
 
         mbeds = self.list_mbeds()
+
+        # Inject missing mount point and serial port for mocked devices
+        mocks = self.mock_read()
+        for mbed in mbeds:
+            tid = mbed['target_id']
+            if tid and len(tid) >= 4:
+                mid = tid[:4]
+                if mid in mocks:
+                    if mbed['mount_point'] is None and 'mount_point' in mocks[mid]:
+                        mbed['mount_point'] = mocks[mid]['mount_point']
+                    if mbed['serial_port'] is None and 'serial_port' in mocks[mid]:
+                        mbed['serial_port'] = mocks[mid]['serial_port']
         for i, val in enumerate(mbeds):
             platform_name = val['platform_name']
             if platform_name not in platform_names:
