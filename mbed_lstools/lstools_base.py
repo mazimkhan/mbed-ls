@@ -338,6 +338,8 @@ class MbedLsToolsBase:
                         mbed['mount_point'] = mocks[mid]['mount_point']
                     if mbed['serial_port'] is None and 'serial_port' in mocks[mid]:
                         mbed['serial_port'] = mocks[mid]['serial_port']
+                    if mbed['target_id_usb_id'] is None:
+                        mbed['target_id_usb_id'] = tid
         for i, val in enumerate(mbeds):
             platform_name = val['platform_name']
             if platform_name not in platform_names:

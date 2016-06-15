@@ -51,7 +51,9 @@ class MbedListingestCase(unittest.TestCase):
 
     def test_manufacture_ids_format(self):
         for dev in self.mbeds.manufacture_ids:
-            self.assertIs(type(dev), str)
+            # Devices are either hardcoded as str values in lstools_base.py
+            # or they are read from the mock file as unicode strings
+            self.assertIn(type(dev), (str, unicode))
             self.assertEqual(len(dev), 4)
 
     def test_list_mbeds_mandatory_fields_exist(self):
