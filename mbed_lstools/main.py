@@ -99,7 +99,9 @@ def cmd_parser_setup():
 
     parser.add_option('-m', '--mock',
                       dest='mock_platform',
-                      help='Add locally manufacturers id and platform name. Example --mock=12B4:NEW_PLATFORM')
+                      action="store_true",
+                      help='Add locally manufacturers id and platform name.'
+                           'Example --mock 0099 NEW_PLATFORM [disk [serial port] , repeat ]')
 
     parser.add_option('-j', '--json',
                       dest='json',
@@ -171,36 +173,26 @@ def mbedls_main():
         sys.exit(0)
 
     if opts.mock_platform:
-        if opts.mock_platform == '*':
-            if opts.json:
-                print json.dumps(mbeds.mock_read(), indent=4)
+        if len(args):
 
-        for token in opts.mock_platform.split(','):
-            if ':' in token:
-                oper = '+' # Default
-                attributes = token.split(':')
-                mid = None
-                platform_name = None
-                mount_point = None
-                serial = None
-                if len(attributes) == 2:
-                    mid, platform_name = attributes
-                elif len(attributes) == 4:
-                    mid, platform_name, mount_point, serial = attributes
-                    mount_point += ':'
-                if mid and mid[0] in ['+', '-']:
-                    oper = mid[0]   # Operation (character)
-                    mid = mid[1:]   # We remove operation character
-                if len(mid) != 4:
-                    print "Mock Id should be 4 characters!"
-                    sys.exit(1)
-                mbeds.mock_manufacture_ids(mid, platform_name, oper=oper, mount_point=mount_point, serial=serial)
-            elif token and token[0] in ['-', '!']:
-                # Operations where do not specify data after colon: --mock=-1234,-7678
-                oper = token[0]
-                mid = token[1:]
-                mbeds.mock_manufacture_ids(mid, 'dummy', oper=oper)
-        if opts.json:
+            def do_mock(*args):
+                l = [x for x in args]
+                if len(args) < 2:
+                    l.append('Dummy')
+                mbeds.mock_manufacture_ids(*l)
+
+            mock_params = []
+            for arg in args:
+                if arg == ',':
+                    do_mock(*mock_params)
+                    mock_params = []
+                else:
+                    mock_params.append(arg)
+
+            # Munch any remain mock inputs
+            if len(mock_params):
+                do_mock(*mock_params)
+        else:
             print json.dumps(mbeds.mock_read(), indent=4)
 
     elif opts.json:
@@ -227,3 +219,5 @@ def mbedls_main():
         mbeds.debug(__name__, "Return code: %d" % mbeds.ERRORLEVEL_FLAG)
 
     sys.exit(mbeds.ERRORLEVEL_FLAG)
+
+

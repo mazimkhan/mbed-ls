@@ -267,12 +267,23 @@ class MbedLsToolsBase:
         self.retarget_data = self.retarget_read()
         return self.retarget_data
 
-    def mock_manufacture_ids(self, mid, platform_name, oper='+', mount_point=None, serial=None):
+    def mock_manufacture_ids(self, mid, platform_name, mount_point=None, serial=None, *unwanted):
         """! Replace (or add if manufacture id doesn't exist) entry in self.manufacture_ids
         @param oper '+' add new mock / override existing entry
                     '-' remove mid from mocking entry
         @return Mocked structure (json format)
         """
+        if len(unwanted):
+            print "Unwanted arguments to mock command: %s" % " ".join(unwanted)
+            sys.exit(1)
+        oper = '+'
+        if mid[0] in ['+', '-', '!']:
+            oper = mid[0]   # Operation (character)
+            mid = mid[1:]   # We remove operation character
+
+        if len(mid) != 4:
+            print "Device identifier should be 4 characters!"
+            sys.exit(1)
         mock_ids = self.mock_read()
 
         # Operations on mocked structure
